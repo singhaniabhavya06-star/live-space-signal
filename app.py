@@ -599,6 +599,7 @@ section[data-testid="stSidebar"] {
 st.sidebar.title("🟢 Live Space Signal")
 
 
+
 page = st.sidebar.radio(
     "Navigate",
     [
@@ -606,9 +607,11 @@ page = st.sidebar.radio(
         "Admin Panel",
         "AI & Crowd Forecast",
         "Analytics",
-        "3D Food Court"
+        "3D Food Court",
+        "3D Digital Signage System"
     ]
 )
+
 
 
 st.sidebar.caption(
@@ -1493,6 +1496,220 @@ ctx.fillText(
         st.caption(
             "Occupancy indicators use the latest manually entered app data. "
             "The 3D layout is illustrative."
+        )
+
+elif page == "3D Digital Signage System":
+    st.title("🖥️ Live Space Signal – 3D Digital Signage")
+    st.caption(
+        "Interactive 3D kiosk with a visitor display driven by current occupancy data."
+    )
+
+    if df.empty:
+        st.warning("No location data is available.")
+    else:
+        import json
+        import streamlit.components.v1 as components
+
+        signage_data = df[
+            ["name", "category", "capacity", "occupied", "status"]
+        ].copy()
+
+        signage_data["percentage"] = (
+            signage_data["occupied"] / signage_data["capacity"] * 100
+        ).round().astype(int)
+
+        signage_json = json.dumps(
+            signage_data.to_dict(orient="records")
+        )
+
+        html = r"""
+        <div id="signage-scene"
+             style="width:100%;height:720px;border-radius:16px;
+                    overflow:hidden;background:#111827;">
+        </div>
+
+        <script type="module">
+        import * as THREE from
+        "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
+        import { OrbitControls } from
+        "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/controls/OrbitControls.js";
+
+        const data = __SIGNAGE_DATA__;
+
+        const root = document.getElementById("signage-scene");
+
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x111827);
+
+        const camera = new THREE.PerspectiveCamera(
+            42, root.clientWidth / root.clientHeight, 0.1, 100
+        );
+        camera.position.set(5, 4, 8);
+
+        const renderer = new THREE.WebGLRenderer({antialias:true});
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.setSize(root.clientWidth, root.clientHeight);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        root.appendChild(renderer.domElement);
+
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.target.set(0, 1.5, 0);
+
+        scene.add(new THREE.HemisphereLight(0xffffff, 0x334155, 2));
+
+        const light = new THREE.DirectionalLight(0xffffff, 3);
+        light.position.set(4, 8, 5);
+        light.castShadow = true;
+        scene.add(light);
+
+        const floor = new THREE.Mesh(
+            new THREE.BoxGeometry(8, 0.2, 5),
+            new THREE.MeshStandardMaterial({color:0x374151})
+        );
+        floor.position.y = -0.12;
+        floor.receiveShadow = true;
+        scene.add(floor);
+
+        function box(w,h,d,color,x,y,z,metalness=0.25) {
+            const mesh = new THREE.Mesh(
+                new THREE.BoxGeometry(w,h,d),
+                new THREE.MeshStandardMaterial({
+                    color,
+                    metalness,
+                    roughness:0.45
+                })
+            );
+            mesh.position.set(x,y,z);
+            mesh.castShadow = true;
+            mesh.receiveShadow = true;
+            scene.add(mesh);
+            return mesh;
+        }
+
+        // Machine base and cabinet
+        box(2.4,0.22,1.35,0x64748b,0,0.12,0);
+        box(2.05,2.8,1.05,0x263449,0,1.62,0);
+        box(2.12,0.12,1.12,0x94a3b8,0,3.05,0);
+
+        // Front display frame
+        box(1.85,1.65,0.12,0x020617,0,2.05,0.56);
+
+        // Screen canvas
+        const screenCanvas = document.createElement("canvas");
+        screenCanvas.width = 900;
+        screenCanvas.height = 760;
+        const ctx = screenCanvas.getContext("2d");
+
+        function drawScreen() {
+            ctx.fillStyle = "#f8fafc";
+            ctx.fillRect(0,0,900,760);
+
+            ctx.fillStyle = "#ea580c";
+            ctx.fillRect(0,0,900,105);
+
+            ctx.fillStyle = "#ffffff";
+            ctx.font = "bold 42px Arial";
+            ctx.fillText("LIVE SPACE SIGNAL",35,67);
+
+            ctx.fillStyle = "#0f172a";
+            ctx.font = "bold 34px Arial";
+            ctx.fillText("VISITOR DASHBOARD",35,155);
+
+            ctx.font = "24px Arial";
+            ctx.fillStyle = "#475569";
+            ctx.fillText("Live food court availability",35,195);
+
+            let y = 245;
+
+            data.slice(0,5).forEach(item => {
+                const color =
+                    item.status === "Available" ? "#16a34a" :
+                    item.status === "Limited" ? "#d97706" : "#dc2626";
+
+                ctx.fillStyle = "#e2e8f0";
+                ctx.fillRect(30,y,840,85);
+
+                ctx.fillStyle = "#0f172a";
+                ctx.font = "bold 27px Arial";
+                ctx.fillText(item.name,50,y+35);
+
+                ctx.fillStyle = color;
+                ctx.font = "bold 25px Arial";
+                ctx.fillText(
+                    item.percentage + "% occupied",50,y+68
+                );
+
+                ctx.textAlign = "right";
+                ctx.fillText(item.status,840,y+48);
+                ctx.textAlign = "left";
+
+                y += 98;
+            });
+
+            ctx.fillStyle = "#334155";
+            ctx.font = "20px Arial";
+            ctx.fillText("Information based on latest staff update",35,735);
+        }
+
+        drawScreen();
+
+        const texture = new THREE.CanvasTexture(screenCanvas);
+        texture.colorSpace = THREE.SRGBColorSpace;
+
+        const screen = new THREE.Mesh(
+            new THREE.PlaneGeometry(1.68,1.42),
+            new THREE.MeshBasicMaterial({map:texture})
+        );
+        screen.position.set(0,2.05,0.63);
+        scene.add(screen);
+
+        // Small camera / sensor above the display
+        box(0.18,0.12,0.08,0x020617,0,2.98,0.59);
+
+        // Side ventilation slots
+        for (let i=0;i<4;i++) {
+            box(0.28,0.045,0.025,0x0f172a,1.04,1.3+i*0.16,0.2);
+        }
+
+        // Floor shadow platform
+        const platform = new THREE.Mesh(
+            new THREE.BoxGeometry(3.2,0.08,2),
+            new THREE.MeshStandardMaterial({color:0x475569})
+        );
+        platform.position.set(0,-0.02,0);
+        scene.add(platform);
+
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene,camera);
+        }
+        animate();
+
+        window.addEventListener("resize",()=>{
+            camera.aspect = root.clientWidth/root.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(root.clientWidth,root.clientHeight);
+        });
+        </script>
+        """
+
+        html = html.replace(
+            "__SIGNAGE_DATA__",
+            signage_json
+        )
+
+        components.html(
+            html,
+            height=740,
+            scrolling=False
+        )
+
+        st.caption(
+            "The visitor screen reflects the latest occupancy data entered "
+            "in the admin panel. The 3D kiosk is a conceptual prototype."
         )
 
 # ---------- FOOTER ----------
