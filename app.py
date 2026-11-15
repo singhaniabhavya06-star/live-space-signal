@@ -1756,7 +1756,23 @@ elif page == "3D Staff Workstation":
     st.subheader("3D Staff Counter")
 
     html = """
-    <div id="staff-scene"
+    <div id="staff-error"
+     style="background:#7f1d1d;color:white;padding:12px;
+            border-radius:8px;font:14px Arial;">
+    Initialising 3D workstation...
+</div>
+
+<script>
+window.addEventListener("error", function(event) {
+    const box = document.getElementById("staff-error");
+    if (box) box.textContent = "JavaScript error: " + event.message;
+});
+
+window.addEventListener("unhandledrejection", function(event) {
+    const box = document.getElementById("staff-error");
+    if (box) box.textContent = "3D module error: " + event.reason;
+});
+</script>
          style="width:100%;height:580px;background:#111827;
                 border-radius:16px;overflow:hidden;">
     </div>
@@ -1871,6 +1887,130 @@ elif page == "3D Staff Workstation":
     ctx.fillText("UPDATE STALL / SEATING AVAILABILITY",55,315);
 
     const texture = new THREE.CanvasTexture(canvas);
+
+html = """
+<div id="staff-scene"
+     style="width:100%;height:580px;background:#111827;
+            border-radius:16px;overflow:hidden;position:relative;">
+</div>
+
+<div id="staff-error"
+     style="background:#7f1d1d;color:white;padding:12px;
+            margin-top:8px;border-radius:8px;font:14px Arial;">
+    Initialising 3D workstation...
+</div>
+
+<script type="module">
+import * as THREE from
+"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
+
+import { OrbitControls } from
+"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/controls/OrbitControls.js";
+
+const root = document.getElementById("staff-scene");
+const errorBox = document.getElementById("staff-error");
+
+try {
+    if (!root) throw new Error("Staff scene container not found.");
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x111827);
+
+    const camera = new THREE.PerspectiveCamera(
+        45, root.clientWidth / root.clientHeight, 0.1, 100
+    );
+    camera.position.set(5, 4, 7);
+
+    const renderer = new THREE.WebGLRenderer({antialias:true});
+    renderer.setSize(root.clientWidth, root.clientHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    root.appendChild(renderer.domElement);
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.target.set(0, 1.2, 0);
+
+    scene.add(new THREE.HemisphereLight(0xffffff, 0x334155, 2));
+
+    const light = new THREE.DirectionalLight(0xffffff, 3);
+    light.position.set(4, 8, 5);
+    light.castShadow = true;
+    scene.add(light);
+
+    function box(w,h,d,color,x,y,z) {
+        const mesh = new THREE.Mesh(
+            new THREE.BoxGeometry(w,h,d),
+            new THREE.MeshStandardMaterial({
+                color:color,
+                roughness:0.55
+            })
+        );
+        mesh.position.set(x,y,z);
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+        scene.add(mesh);
+        return mesh;
+    }
+
+    // Floor and workstation platform
+    box(12,0.2,8,0x374151,0,-0.2,0);
+    box(5,0.15,2.5,0x64748b,0,0,0);
+
+    // Staff counter
+    box(4,1.1,1.2,0x475569,0,0.65,-1.3);
+    box(4.1,0.12,1.3,0x94a3b8,0,1.25,-1.3);
+
+    // Monitor
+    box(1.9,1.25,0.12,0x020617,0,2.05,-1.5);
+    box(0.12,0.6,0.12,0x94a3b8,0,1.45,-1.5);
+    box(0.8,0.08,0.5,0x64748b,0,1.35,-1.5);
+
+    // Keyboard and mouse
+    box(1.3,0.07,0.45,0x111827,0,1.38,-0.7);
+    box(0.2,0.08,0.3,0x0f172a,0.95,1.38,-0.7);
+
+    // Staff chair
+    box(0.9,0.15,0.9,0x334155,0,0.8,1.1);
+    box(0.9,1.1,0.15,0x334155,0,1.35,1.5);
+    box(0.12,0.8,0.12,0x94a3b8,0,0.3,1.1);
+
+    // Equipment cabinet
+    box(0.9,1.6,0.8,0x263449,-2.5,0.8,-1.3);
+
+    // Monitor screen
+    const canvas = document.createElement("canvas");
+    canvas.width = 800;
+    canvas.height = 500;
+
+    const ctx = canvas.getContext("2d");
+
+    ctx.fillStyle = "#f8fafc";
+    ctx.fillRect(0,0,800,500);
+
+    ctx.fillStyle = "#166534";
+    ctx.fillRect(0,0,800,90);
+
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 38px Arial";
+    ctx.fillText("LIVE SPACE SIGNAL",30,58);
+
+    ctx.fillStyle = "#0f172a";
+    ctx.font = "bold 32px Arial";
+    ctx.fillText("STAFF CONTROL PANEL",30,155);
+
+    ctx.font = "24px Arial";
+    ctx.fillStyle = "#475569";
+    ctx.fillText("Manual occupancy reporting station",30,205);
+
+    ctx.fillStyle = "#16a34a";
+    ctx.fillRect(30,260,740,90);
+
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 28px Arial";
+    ctx.fillText("UPDATE STALL / SEATING AVAILABILITY",55,315);
+
+    const texture = new THREE.CanvasTexture(canvas);
     texture.colorSpace = THREE.SRGBColorSpace;
 
     const screen = new THREE.Mesh(
@@ -1894,8 +2034,18 @@ elif page == "3D Staff Workstation":
         camera.updateProjectionMatrix();
         renderer.setSize(root.clientWidth,root.clientHeight);
     });
-    </script>
-    """
+
+    if (errorBox) errorBox.style.display = "none";
+
+} catch (error) {
+    if (errorBox) {
+        errorBox.textContent = "3D workstation error: " + error.message;
+    }
+    console.error(error);
+}
+</script>
+"""
+
 
     components.html(
         html,
