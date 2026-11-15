@@ -1415,15 +1415,40 @@ elif page == "3D Food Court":
           scene.add(marker);
 
           const pct=Math.round(item.occupied/item.capacity*100);
-          const textSprite=document.createElement("canvas");
-          textSprite.width=512;textSprite.height=128;
-          const ctx=textSprite.getContext("2d");
-          ctx.fillStyle="#ffffff";
-          ctx.font="bold 34px Arial";
-          ctx.textAlign="center";
-          ctx.fillText(item.name,256,45);
-          ctx.font="28px Arial";
-          ctx.fillText(item.status+" · "+pct+"%",256,91);
+          
+const textSprite=document.createElement("canvas");
+textSprite.width=640;
+textSprite.height=160;
+
+const ctx=textSprite.getContext("2d");
+
+// Dark label background
+ctx.fillStyle="#202b30";
+ctx.beginPath();
+ctx.roundRect(10,10,620,140,18);
+ctx.fill();
+
+// Stall or seating name
+ctx.textAlign="center";
+ctx.textBaseline="middle";
+ctx.fillStyle="#ffffff";
+ctx.font="bold 40px Arial";
+ctx.fillText(item.name,320,52);
+
+// Occupancy status colour
+const statusColor = {
+  "Available":"#42d991",
+  "Limited":"#ffc247",
+  "Full":"#ff6262"
+};
+
+ctx.fillStyle=statusColor[item.status] || "#ffffff";
+ctx.font="bold 34px Arial";
+ctx.fillText(
+  item.status+" · "+pct+"% occupied",
+  320,108
+);
+
           const sprite=new THREE.Sprite(
             new THREE.SpriteMaterial({
               map:new THREE.CanvasTexture(textSprite),
