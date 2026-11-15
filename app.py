@@ -608,7 +608,8 @@ page = st.sidebar.radio(
         "AI & Crowd Forecast",
         "Analytics",
         "3D Food Court",
-        "3D Digital Signage System"
+        "3D Digital Signage System",
+        "3D Staff Workstation"
     ]
 )
 
@@ -1573,7 +1574,7 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
         const camera = new THREE.PerspectiveCamera(
             42, root.clientWidth / root.clientHeight, 0.1, 100
         );
-        camera.position.set(5, 4, 8);
+        camera.position.set(4, 3.2, 5.5);
 
         const renderer = new THREE.WebGLRenderer({antialias:true});
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -1584,7 +1585,7 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
         const controls = new OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
-        controls.target.set(0, 1.5, 0);
+        controls.target.set(0, 1.6, 0);
 
         scene.add(new THREE.HemisphereLight(0xffffff, 0x334155, 2));
 
