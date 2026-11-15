@@ -598,15 +598,18 @@ section[data-testid="stSidebar"] {
 
 st.sidebar.title("🟢 Live Space Signal")
 
+
 page = st.sidebar.radio(
     "Navigate",
     [
         "Visitor Dashboard",
         "Admin Panel",
         "AI & Crowd Forecast",
-        "Analytics"
+        "Analytics",
+        "3D Food Court"
     ]
 )
+
 
 st.sidebar.caption(
     "Academic prototype · Manual occupancy updates"
@@ -1206,6 +1209,266 @@ elif page == "Analytics":
             "text/csv"
         )
 
+
+elif page == "3D Food Court":
+    st.title("🏙️ Live Space Signal — 3D Food Court")
+    st.caption(
+        "Conceptual 3D reconstruction based on site photographs. "
+        "The internal layout is illustrative, not an architectural survey."
+    )
+
+    if df.empty:
+        st.warning("No locations are available to display.")
+    else:
+        import streamlit.components.v1 as components
+
+        locations_json = df[
+            ["name", "category", "capacity", "occupied", "status"]
+        ].to_json(orient="records")
+
+        html = r"""
+        <div id="lss-scene" style="width:100%;height:700px;background:#dce5e3;border-radius:16px;overflow:hidden;position:relative">
+        <div id="lss-label" style="position:absolute;top:12px;left:12px;z-index:2;background:#ffffffed;padding:10px 14px;border-radius:10px;font:14px Arial;color:#172b27">
+        <b>LIVE SPACE SIGNAL · 3D PLAZA</b><br>
+        <span style="color:#38845e">● Available</span>
+        <span style="color:#c89525">● Limited</span>
+        <span style="color:#d94b4b">● Full</span>
+        </div>
+        </div>
+
+        <script type="importmap">
+        {
+          "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+          }
+        }
+        </script>
+
+        <script type="module">
+        import * as THREE from "three";
+        import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+
+        const locations = __DATA__;
+        const root = document.getElementById("lss-scene");
+
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0xdce5e3);
+
+        const camera = new THREE.PerspectiveCamera(
+          45, root.clientWidth / root.clientHeight, 0.1, 1000
+        );
+        camera.position.set(24, 23, 29);
+
+        const renderer = new THREE.WebGLRenderer({antialias:true});
+        renderer.setSize(root.clientWidth, root.clientHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        root.appendChild(renderer.domElement);
+
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.target.set(0, 1, 0);
+        controls.maxPolarAngle = Math.PI / 2.05;
+
+        scene.add(new THREE.HemisphereLight(0xffffff, 0x75816e, 2));
+
+        const sun = new THREE.DirectionalLight(0xffffff, 2.2);
+        sun.position.set(-12, 25, 15);
+        sun.castShadow = true;
+        scene.add(sun);
+
+        function material(color, roughness=0.85) {
+          return new THREE.MeshStandardMaterial({color, roughness});
+        }
+
+        function block(x,y,z,w,h,d,color) {
+          const mesh = new THREE.Mesh(
+            new THREE.BoxGeometry(w,h,d), material(color)
+          );
+          mesh.position.set(x,y+h/2,z);
+          mesh.castShadow = true;
+          mesh.receiveShadow = true;
+          scene.add(mesh);
+          return mesh;
+        }
+
+        // Paved plaza
+        block(0,-0.25,0,34,0.5,27,0xb9b9ae);
+
+        // Paving grid
+        for(let x=-16; x<=16; x+=2) {
+          block(x,0.005,0,0.035,0.01,26,0x999d94);
+        }
+        for(let z=-12; z<=12; z+=2) {
+          block(0,0.006,z,33,0.01,0.035,0x999d94);
+        }
+
+        // Commercial shopfronts at the rear
+        const shopColors = [0x76685b,0x424b4b,0x806b55,0x565d62];
+        for(let i=0;i<4;i++) {
+          const x=-12+i*8;
+          block(x,0,-10,7.5,3.6,2.2,shopColors[i]);
+          block(x,1.8,-8.82,6.6,1.25,0.08,0x283c42);
+          block(x,3.65,-10,7.7,0.15,2.4,0x4a4b49);
+          block(x,0.3,-8.78,6.5,0.18,0.12,0xc49b6c);
+        }
+
+        // Upper residential building backdrop
+        block(0,3.7,-12.2,33,7,1.2,0xc5b69c);
+        for(let i=0;i<11;i++) {
+          const x=-15+i*3;
+          block(x,5.2,-11.55,1.2,1.8,0.08,0x8da8a9);
+          block(x,8,-11.55,1.2,1.8,0.08,0x8da8a9);
+        }
+
+        // Shop signage boards
+        function label(text,x,y,z) {
+          const canvas=document.createElement("canvas");
+          canvas.width=512; canvas.height=128;
+          const ctx=canvas.getContext("2d");
+          ctx.fillStyle="#263b38";
+          ctx.fillRect(0,0,512,128);
+          ctx.fillStyle="#ffffff";
+          ctx.font="bold 38px Arial";
+          ctx.textAlign="center";
+          ctx.fillText(text,256,78);
+          const texture=new THREE.CanvasTexture(canvas);
+          const sprite=new THREE.Sprite(
+            new THREE.SpriteMaterial({map:texture})
+          );
+          sprite.position.set(x,y,z);
+          sprite.scale.set(4.2,1.05,1);
+          scene.add(sprite);
+        }
+
+        const stalls=locations.filter(x=>x.category==="Food Stall");
+        stalls.forEach((item,i)=>{
+          const x=-12+i*8;
+          label(item.name,x,2.65,-8.65);
+        });
+
+        // Seating tables and chairs
+        function table(x,z) {
+          block(x,0.85,z,1.7,0.16,1.7,0x80664d);
+          block(x,0.35,z,0.14,0.9,0.14,0x51483d);
+          for(const dx of [-1.25,1.25]) {
+            block(x+dx,0.45,z,0.65,0.15,0.65,0x536f64);
+            block(x+dx,0.05,z,0.1,0.7,0.1,0x51483d);
+          }
+          for(const dz of [-1.25,1.25]) {
+            block(x,0.45,z+dz,0.65,0.15,0.65,0x536f64);
+            block(x,0.05,z+dz,0.1,0.7,0.1,0x51483d);
+          }
+        }
+
+        for(let i=0;i<3;i++) {
+          table(-10+i*4,2);
+          table(-10+i*4,7);
+        }
+
+        // Palm trees and landscaping
+        function tree(x,z) {
+          block(x,0.2,z,0.45,3,0.45,0x806044);
+          for(let i=0;i<7;i++) {
+            const angle=i*Math.PI*2/7;
+            const leaf=new THREE.Mesh(
+              new THREE.ConeGeometry(0.55,3,5),
+              material(0x34764c)
+            );
+            leaf.position.set(
+              x+Math.cos(angle)*1.0,3.6,z+Math.sin(angle)*1.0
+            );
+            leaf.rotation.z=-Math.PI/2;
+            leaf.rotation.y=-angle;
+            scene.add(leaf);
+          }
+          block(x,0.1,z,2.4,0.2,2.4,0x77796b);
+        }
+
+        [-15,-5,5,15].forEach(x=>tree(x,-4));
+        [-15,15].forEach(x=>tree(x,10));
+
+        // Occupancy indicators
+        const colors={
+          "Available":0x31a56d,
+          "Limited":0xe2aa35,
+          "Full":0xe34f4f
+        };
+
+        const positions=[
+          [-12,-6],[-4,-6],[4,-6],[12,-6],
+          [-5,11],[5,11]
+        ];
+
+        locations.forEach((item,i)=>{
+          const p=positions[i] || [0,0];
+          const color=colors[item.status] || 0x777777;
+          const marker=new THREE.Mesh(
+            new THREE.CylinderGeometry(1.15,1.15,0.16,40),
+            new THREE.MeshStandardMaterial({
+              color:color,emissive:color,emissiveIntensity:0.18
+            })
+          );
+          marker.position.set(p[0],0.12,p[1]);
+          scene.add(marker);
+
+          const pct=Math.round(item.occupied/item.capacity*100);
+          const textSprite=document.createElement("canvas");
+          textSprite.width=512;textSprite.height=128;
+          const ctx=textSprite.getContext("2d");
+          ctx.fillStyle="#ffffff";
+          ctx.font="bold 34px Arial";
+          ctx.textAlign="center";
+          ctx.fillText(item.name,256,45);
+          ctx.font="28px Arial";
+          ctx.fillText(item.status+" · "+pct+"%",256,91);
+          const sprite=new THREE.Sprite(
+            new THREE.SpriteMaterial({
+              map:new THREE.CanvasTexture(textSprite),
+              transparent:true
+            })
+          );
+          sprite.position.set(p[0],2.0,p[1]);
+          sprite.scale.set(4.5,1.15,1);
+          scene.add(sprite);
+        });
+
+        // Plaza boundary
+        block(0,0,-13.2,34,0.5,0.5,0x626d69);
+        block(0,0,13.2,34,0.5,0.5,0x626d69);
+        block(-16.7,0,0,0.5,0.5,26,0x626d69);
+        block(16.7,0,0,0.5,0.5,26,0x626d69);
+
+        function animate() {
+          requestAnimationFrame(animate);
+          controls.update();
+          renderer.render(scene,camera);
+        }
+        animate();
+
+        window.addEventListener("resize",()=>{
+          camera.aspect=root.clientWidth/root.clientHeight;
+          camera.updateProjectionMatrix();
+          renderer.setSize(root.clientWidth,root.clientHeight);
+        });
+        </script>
+        </div>
+        """
+
+        html = html.replace("__DATA__", locations_json)
+
+        components.html(
+            html,
+            height=720,
+            scrolling=False
+        )
+
+        st.caption(
+            "Occupancy indicators use the latest manually entered app data. "
+            "The 3D layout is illustrative."
+        )
 
 # ---------- FOOTER ----------
 
