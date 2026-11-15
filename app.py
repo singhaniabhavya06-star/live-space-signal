@@ -1524,9 +1524,31 @@ elif page == "3D Digital Signage System":
 
         html = r"""
         <div id="signage-scene"
-             style="width:100%;height:720px;border-radius:16px;
-                    overflow:hidden;background:#111827;">
-        </div>
+     style="width:100%;height:720px;border-radius:16px;
+            overflow:hidden;background:#111827;">
+</div>
+
+<div id="signage-error"
+     style="color:white;background:#7f1d1d;padding:12px;
+            margin-top:8px;border-radius:8px;font:14px Arial;">
+    Loading 3D engine...
+</div>
+
+<script>
+window.addEventListener("error", function(event) {
+    const box = document.getElementById("signage-error");
+    if (box) box.textContent = "JavaScript error: " + event.message;
+});
+
+window.addEventListener("unhandledrejection", function(event) {
+    const box = document.getElementById("signage-error");
+    if (box) {
+        box.textContent =
+            "Module loading error: " +
+            (event.reason?.message || String(event.reason));
+    }
+});
+</script>
 
         <script type="module">
         import * as THREE from
@@ -1612,7 +1634,6 @@ elif page == "3D Digital Signage System":
             ctx.fillStyle = "#ffffff";
             ctx.font = "bold 42px Arial";
             ctx.fillText("LIVE SPACE SIGNAL",35,67);
-
             ctx.fillStyle = "#0f172a";
             ctx.font = "bold 34px Arial";
             ctx.fillText("VISITOR DASHBOARD",35,155);
