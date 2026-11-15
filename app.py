@@ -1778,13 +1778,17 @@ elif page == "3D Staff Workstation":
             "3D module error: " + String(event.reason);
     });
     </script>
-
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
     <script type="module">
-    import * as THREE from
-    "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
-
-    import { OrbitControls } from
-    "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/controls/OrbitControls.js";
+    import * as THREE from "three";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
     const root = document.getElementById("staff-scene");
     const errorBox = document.getElementById("staff-error");
